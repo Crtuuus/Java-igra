@@ -10,7 +10,9 @@ Moj projekt pri predmetu PROG2
 * en strelja od daleč s počasnimi velikimi izstrelki in se počasi premika  
 * hitri mali sledilci malo hp  
 * in drugi  
+
 -Sovražniki se ne prekrivajo  
+
 -Možnost nadgradnje igralca  
 * hitrost premikanja  
 * način streljanja (frekvenca, hitrost izstrelka, količina izstrelkov, morda stvari s tipkovnico)
