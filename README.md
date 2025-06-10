@@ -13,6 +13,6 @@ Moj projekt pri predmetu PROG2
 -Spodnji panel z točkami, ki jih dobimo ko premagamo sovražnike, xp in hp  
 -Meni za pavzo  
 -"Leveli", ki so vezani na čas  
-	--Ti vplivajo na hitrost sovražnikov in ovir  
-	--Vplivajo na vrsto in količino sovražnikov  
-	--Vplivajo na dobivanje xp  
+>Ti vplivajo na hitrost sovražnikov in ovir  
+>Vplivajo na vrsto in količino sovražnikov  
+>Vplivajo na dobivanje xp  
