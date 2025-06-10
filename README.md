@@ -2,7 +2,7 @@
 Moj projekt pri predmetu PROG2
 
 # To do
--Trki igralec sovražnik igralec ovira
+-Trki igralec sovražnik igralec ovira  
 -Ovire  
 -Hitrost Ovir in sovražnikov se veča s časom  
 -Različni sovražniki  
