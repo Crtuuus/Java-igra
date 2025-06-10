@@ -10,6 +10,7 @@ Moj projekt pri predmetu PROG2
 -"Boss fight"  
 -Glavni panel z samo igro  
 -Zgornji panel, kjer je najprej meni in kasneje izbor nadgradenj  
+-Mogoče stranski z cooldown in tipkami za rabo drugih funkcij  
 -Spodnji panel z točkami, ki jih dobimo ko premagamo sovražnike, xp in hp  
 -Meni za pavzo  
 
