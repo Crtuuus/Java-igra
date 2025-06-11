@@ -16,20 +16,12 @@ public abstract class Entitete {
     public abstract void draw(Graphics2D g);
 
     public Rectangle2D.Double getBounds() {
-        return new Rectangle2D.Double(
-            pos.x, pos.y,
-            getWidth(), getHeight()
-        );
+        return new Rectangle2D.Double(pos.x, pos.y, getWidth(), getHeight());
     }
 
     protected abstract double getWidth();
     protected abstract double getHeight();
 
-    public boolean isAlive() {
-        return alive;
-    }
-
-    public void setAlive(boolean alive) {
-        this.alive = alive;
-    }
+    public boolean isAlive() { return alive; }
+    public void setAlive(boolean a) { this.alive = a; }
 }
