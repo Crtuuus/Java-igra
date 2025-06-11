@@ -1,36 +1,27 @@
-package osnove_delovanja.entity;
+package osnove_delovanja.Entitete;
 
 import java.awt.Graphics2D;
-import java.awt.geom.Point2D;
 import java.awt.Color;
-
+import java.awt.geom.Point2D;
 import osnove_delovanja.Razno.Konstante;
-import osnove_delovanja.util.Constants;
 
 public class Nasprotniki extends Entitete {
     public Nasprotniki(Point2D.Double startPos) {
         super(startPos);
     }
 
-    /**
-     * Move downward at a constant speed.
-     */
     @Override
     public void update() {
-        pos.y += Konstante.ENEMY_SPEED / 2;  // or Constants.ENEMY_SPEED if defined
+        pos.y += Konstante.ENEMY_SPEED;
     }
 
-    /**
-     * Draw the enemy as a red square.
-     */
     @Override
     public void draw(Graphics2D g) {
         g.setColor(Color.RED);
-        g.fillRect((int)pos.x - 10, (int)pos.y - 10, 20, 20);
+        int size = 20;
+        g.fillRect((int)pos.x - size/2, (int)pos.y - size/2, size, size);
     }
 
-    @Override
-    protected double getWidth()  { return 20; }
-    @Override
-    protected double getHeight() { return 20; }
+    @Override protected double getWidth()  { return 20; }
+    @Override protected double getHeight() { return 20; }
 }
