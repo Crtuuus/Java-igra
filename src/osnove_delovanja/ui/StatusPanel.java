@@ -1,8 +1,28 @@
 package osnove_delovanja.ui;
-import javax.swing.*;
-import java.awt.*;
-public class StatusPanel extends JPanel{
-    JLabel sc=new JLabel("Score:0"),lv=new JLabel("Lives:3");
-    public StatusPanel(){setLayout(new FlowLayout(FlowLayout.LEFT));add(sc);add(Box.createHorizontalStrut(20));add(lv);}
-    public void update(int s,int l){sc.setText("Score:"+s);lv.setText("Lives:"+l);}    
+
+import javax.swing.JPanel;
+
+import osnove_delovanja.Razno.Konstante;
+
+import java.awt.Graphics;
+import java.awt.Color;
+
+public class StatusPanel extends JPanel {
+    private int score = 0;
+    private int lives = Konstante.ZIVLJENJA;
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+    public void setLives(int lives) {
+        this.lives = lives;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.setColor(Color.WHITE);
+        g.drawString("Življenja: " + lives, 10, 20);
+        g.drawString("Točke: " + score, 10, 40);
+    }
 }

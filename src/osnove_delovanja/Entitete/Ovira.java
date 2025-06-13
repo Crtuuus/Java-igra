@@ -22,6 +22,14 @@ public class Ovira extends Entitete {
         g.fillRect((int)pos.x, (int)pos.y, s, s);
     }
 
-    @Override protected double getWidth()  { return Konstante.OVIRASTEVILO; }
-    @Override protected double getHeight() { return Konstante.OVIRASTEVILO; }
+    @Override
+    public double getWidth() {
+      return Konstante.OVIRA_SIZE;
+    }
+
+    @Override
+    public double getHeight() {
+      return 5;
+    }
+
 }

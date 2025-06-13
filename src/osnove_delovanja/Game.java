@@ -1,30 +1,28 @@
 package osnove_delovanja;
 
+import java.awt.BorderLayout;
+
 import javax.swing.*;
-import java.awt.*;
 import osnove_delovanja.Razno.Konstante;
-import osnove_delovanja.ui.MenuPanel;
 import osnove_delovanja.ui.StatusPanel;
 
 public class Game {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Space Shooter");
+            JFrame frame = new JFrame("Moja Igra");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setLayout(new BorderLayout()); // Dodaj to vrstico!
 
-            CardLayout cl=new CardLayout();
-            JPanel cont=new JPanel(cl);
-            Game_panel gp=new Game_panel();
-            StatusPanel sp=new StatusPanel(); gp.setStatusPanel(sp);
-            cont.add(new MenuPanel(e->cl.show(cont,"G")),"M");
-            JPanel pc=new JPanel(new BorderLayout());
-            pc.add(gp,BorderLayout.CENTER);
-            pc.add(sp,BorderLayout.SOUTH);
-            cont.add(pc,"G");
+            StatusPanel statusPanel = new StatusPanel();
+            Game_panel gamePanel = new Game_panel();
+            gamePanel.setStatusPanel(statusPanel);
 
-            frame.add(cont);
-            frame.pack();frame.setLocationRelativeTo(null);frame.setVisible(true);
-            cl.show(cont,"M");
+            frame.add(gamePanel, BorderLayout.CENTER); // Pravilno dodajanje
+            frame.add(statusPanel, BorderLayout.SOUTH); // Pravilno dodajanje
+
+            frame.setSize(Konstante.WIDTH, Konstante.HEIGHT + 60);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
         });
     }
 }

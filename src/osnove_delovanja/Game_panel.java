@@ -1,15 +1,15 @@
 package osnove_delovanja;
 
+import osnove_delovanja.Entitete.*;
+import osnove_delovanja.Razno.Konstante;
+import osnove_delovanja.ui.StatusPanel;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
-
-import osnove_delovanja.Entitete.*;
-import osnove_delovanja.Razno.Konstante;
-import osnove_delovanja.ui.StatusPanel;
 
 public class Game_panel extends JPanel implements Runnable, MouseMotionListener, MouseListener {
     private Thread gameThread;
@@ -31,11 +31,7 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
         addMouseMotionListener(this);
         addMouseListener(this);
 
-        // initialize player in center
-        player = new Igralec(new Point2D.Double(
-            Konstante.WIDTH / 2.0,
-            Konstante.HEIGHT / 2.0
-        ));
+        player = new Igralec(new Point2D.Double(Konstante.WIDTH / 2.0, Konstante.HEIGHT / 2.0));
         entities.add(player);
 
         gameThread = new Thread(this);
@@ -55,72 +51,101 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
             updateGame();
             repaint();
             long elapsed = System.currentTimeMillis() - start;
-            try { Thread.sleep(Math.max(1, frameTime - elapsed)); } catch (InterruptedException ignored) {}
+            try {
+                Thread.sleep(Math.max(1, frameTime - elapsed));
+            } catch (InterruptedException ignored) {}
         }
     }
 
     private void updateGame() {
         long now = System.currentTimeMillis();
-        // Spawn enemy wave
+
+        // Spawn enemies
         if (now - lastEnemyWave >= Konstante.INTERVALVALOV) {
             for (int i = 0; i < waveCount; i++) {
-                double x = Math.random() * (Konstante.WIDTH - 20);
-                entities.add(new Nasprotniki(
-                    new Point2D.Double(x, -20), player
-                ));
+                double x = Math.random() * (Konstante.WIDTH - Konstante.NASPROTNIK_SIZE);
+                Point2D.Double spawnPos = new Point2D.Double(x, 0);
+                if (Math.random() < 0.5) {
+                    entities.add(new Sledilec(spawnPos, player));
+                } else {
+                    entities.add(new Strelec(spawnPos, player));
+                }
             }
             waveCount++;
             lastEnemyWave = now;
         }
-        // Spawn obstacles at top
-        if (now - lastObstacleSpawn >= 5000) {
-            double x = Math.random() * (Konstante.WIDTH - Konstante.OVIRASTEVILO);
-            obstacles.add(new Ovira(
-                new Point2D.Double(x, -Konstante.OVIRASTEVILO)
-            ));
+
+        // Spawn obstacles
+        if (now - lastObstacleSpawn >= Konstante.OVIRA_INTERVAL) {
+            double x = Math.random() * (Konstante.WIDTH - Konstante.OVIRA_SIZE);
+            obstacles.add(new Ovira(new Point2D.Double(x, -Konstante.OVIRA_SIZE)));
             lastObstacleSpawn = now;
         }
 
-        // Update all entities and obstacles
-        for (Entitete e : new ArrayList<>(entities)) e.update();
-        for (Ovira o : new ArrayList<>(obstacles)) o.update();
-
-        // Collisions: bullets vs. enemies
+        // Enemy shooting
         for (Entitete e : new ArrayList<>(entities)) {
-            if (e instanceof Nasprotniki) {
-                for (Entitete b : new ArrayList<>(entities)) {
-                    if (b instanceof izstrelek &&
-                        e.getBounds().intersects(b.getBounds())) {
-                        e.setAlive(false);
-                        b.setAlive(false);
-                        score += 10;
-                    }
+            if (e instanceof Strelec s) {
+                if (now - s.getLastShotTime() >= Konstante.STRELEC_FIRE_RATE) {
+                    Point2D.Double origin = new Point2D.Double(
+                        s.getPos().x + s.getWidth() / 2,
+                        s.getPos().y + s.getHeight() / 2
+                    );
+                    entities.add(new Izstrelek(origin, player.getPos(), false));
+                    s.setLastShotTime(now);
                 }
             }
         }
-        // Collisions: player vs. enemies
+
+        // Update entities
+        for (Entitete e : new ArrayList<>(entities)) e.update();
+        for (Ovira o : new ArrayList<>(obstacles)) o.update();
+
+        // Handle collisions
         for (Entitete e : new ArrayList<>(entities)) {
-            if (e instanceof Nasprotniki &&
-                e.getBounds().intersects(player.getBounds())) {
-                e.setAlive(false);
-                lives--;
-                if (lives <= 0) running = false;
+            if (e instanceof Izstrelek izstrelek) {
+                for (Entitete target : new ArrayList<>(entities)) {
+                    if (target instanceof Nasprotnik nasprotnik && izstrelek.isFriendly()) {
+                        if (izstrelek.getBounds().intersects(nasprotnik.getBounds())) {
+                            izstrelek.setAlive(false);
+                            nasprotnik.setAlive(false);
+                            score += 10;
+                        }
+                    }
+                }
+            } else if (e instanceof Nasprotnik nasprotnik) {
+                if (nasprotnik.getBounds().intersects(player.getBounds())) {
+                    nasprotnik.setAlive(false);
+                    lives--;
+                }
             }
         }
-        // Collisions: player vs. obstacles
-        for (Ovira o : obstacles) {
+
+        for (Entitete e : new ArrayList<>(entities)) {
+            if (e instanceof Izstrelek iz) {
+                if (!iz.isFriendly() && iz.getBounds().intersects(player.getBounds())) {
+                    iz.setAlive(false);
+                    lives--;
+                    if (lives <= 0) running = false;
+                }
+            }
+        }
+
+        for (Ovira o : new ArrayList<>(obstacles)) {
             if (player.getBounds().intersects(o.getBounds())) {
                 player.revertLastMove();
             }
         }
 
-        // Remove off-screen obstacles
-        obstacles.removeIf(o -> o.getBounds().getY() > Konstante.HEIGHT);
-        // Clean up dead entities
+        // Cleanup
         entities.removeIf(ent -> !ent.isAlive());
+        obstacles.removeIf(o -> o.getBounds().getY() > Konstante.HEIGHT);
 
         // Update HUD
-        if (statusPanel != null) statusPanel.update(score, lives);
+        if (statusPanel != null) {
+            statusPanel.setScore(score);
+            statusPanel.setLives(lives);
+            statusPanel.repaint();
+        }
     }
 
     @Override
@@ -131,17 +156,28 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
         for (Ovira o : obstacles) o.draw(g2);
     }
 
-    @Override public void mouseMoved(MouseEvent e) {
+    @Override
+    public void mouseMoved(MouseEvent e) {
         player.setTarget(new Point2D.Double(e.getX(), e.getY()));
     }
+
     @Override public void mouseDragged(MouseEvent e) { mouseMoved(e); }
-    @Override public void mousePressed(MouseEvent e) {
+
+    @Override
+    public void mousePressed(MouseEvent e) {
         if (SwingUtilities.isLeftMouseButton(e) && running) {
-            entities.add(new izstrelek(
-                player.getPos(), new Point2D.Double(e.getX(), e.getY())
-            ));
+            Point2D.Double mouse = new Point2D.Double(e.getX(), e.getY());
+            Point2D.Double center = player.getPos();
+            double dx = mouse.x - center.x;
+            double dy = mouse.y - center.y;
+            double angle = Math.atan2(dy, dx);
+            double spawnDist = player.getWidth() / 2 + Konstante.IZSTRELEK_SIZE / 2.0;
+            double spawnX = center.x + Math.cos(angle) * spawnDist;
+            double spawnY = center.y + Math.sin(angle) * spawnDist;
+            entities.add(new Izstrelek(new Point2D.Double(spawnX, spawnY), mouse, true));
         }
     }
+
     @Override public void mouseReleased(MouseEvent e) {}
     @Override public void mouseEntered(MouseEvent e) {}
     @Override public void mouseExited(MouseEvent e) {}
