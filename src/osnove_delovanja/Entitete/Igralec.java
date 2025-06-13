@@ -2,6 +2,8 @@ package osnove_delovanja.Entitete;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Shape;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 
@@ -9,10 +11,9 @@ import osnove_delovanja.Razno.Konstante;
 
 public class Igralec extends Entitete {
     private Point2D.Double target;
-    private Point2D.Double lastPos;  // remember last position
+    private Point2D.Double lastPos;
     private int lives = Konstante.ZIVLJENJA;
 
-    // Constructor
     public Igralec(Point2D.Double startPos) {
         super(startPos, Konstante.IGRALEC_VELIKOST, Konstante.IGRALEC_VELIKOST, OblikaTip.KROG);
         this.target = new Point2D.Double(startPos.x, startPos.y);
@@ -26,8 +27,7 @@ public class Igralec extends Entitete {
     @Override
     public void draw(Graphics2D g2) {
         g2.setColor(Color.CYAN);
-        Rectangle2D b = getBounds();
-        g2.fillOval((int) b.getX(), (int) b.getY(), (int) b.getWidth(), (int) b.getHeight());
+        g2.fill(getOblika());
     }
 
     @Override
@@ -62,5 +62,15 @@ public class Igralec extends Entitete {
     @Override
     public double getHeight() {
         return Konstante.IGRALEC_VELIKOST;
+    }
+
+    @Override
+    public Shape getOblika() {
+        return new Ellipse2D.Double(pos.x, pos.y, getWidth(), getHeight());
+    }
+
+    @Override
+    public Rectangle2D getBounds() {
+        return getOblika().getBounds2D();  // Ujemanje z elipso
     }
 }

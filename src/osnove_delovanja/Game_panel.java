@@ -39,6 +39,19 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
     private boolean showBombEffect = false;
     private long bombEffectStart = 0;
     private final long bombEffectDuration = 1000; // 1 second
+    private static List<Entitete> globalEntities;
+    public static void setGlobalEntityList(List<Entitete> list) {
+        globalEntities = list;
+    }
+
+    public static void addEntityFromStaticContext(Entitete e) {
+        if (globalEntities != null) {
+            synchronized (globalEntities) {
+                globalEntities.add(e);
+            }
+        }
+    }
+    
 
 
 
@@ -56,6 +69,8 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
             Konstante.HEIGHT / 2.0
         ));
         entities.add(player);
+        Game_panel.setGlobalEntityList(entities);
+
 
         gameThread = new Thread(this);
         gameThread.start();
@@ -106,7 +121,7 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
         }
 
         // Sovražniki streljajo
-        for (Entitete e : new ArrayList<>(entities)) {
+        for (Entitete e : List.copyOf(entities)) {
             if (e instanceof Strelec s) {
                 if (now - s.getLastShotTime() >= Konstante.STRELEC_FIRE_RATE) {
                     Point2D.Double origin = new Point2D.Double(
@@ -120,13 +135,13 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
         }
 
         // Posodobi entitete in ovire
-        for (Entitete e : new ArrayList<>(entities)) e.update();
-        for (Ovira o : new ArrayList<>(obstacles)) o.update();
+        for (Entitete e : List.copyOf(entities)) e.update();
+        for (Ovira o : List.copyOf(obstacles)) o.update();
 
-        // Trki
-        for (Entitete e : new ArrayList<>(entities)) {
+        // Trki izstrelkov z nasprotniki
+        for (Entitete e : List.copyOf(entities)) {
             if (e instanceof Izstrelek izstrelek) {
-                for (Entitete target : new ArrayList<>(entities)) {
+                for (Entitete target : List.copyOf(entities)) {
                     if (target instanceof Nasprotnik nasprotnik && izstrelek.isFriendly()) {
                         if (izstrelek.getBounds().intersects(nasprotnik.getBounds())) {
                             izstrelek.setAlive(false);
@@ -141,26 +156,13 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
                         }
                     }
                 }
-            } else if (e instanceof Nasprotnik nasprotnik) {
-                if (nasprotnik.getBounds().intersects(player.getBounds())) {
-                    nasprotnik.setAlive(false);
-                    lives--;
-                    if (lives <= 0) {
-                        running = false;
-                        if (onGameOver != null) {
-                            SwingUtilities.invokeLater(onGameOver);
-                        }
-
-                        return;
-                    }
-                }
             }
         }
 
-        // Trki izstrelkov nasprotnika in igralca
-        for (Entitete e : new ArrayList<>(entities)) {
-            if (e instanceof Izstrelek iz) {
-                if (!iz.isFriendly() && iz.getBounds().intersects(player.getBounds())) {
+        // Trki sovražnikovih izstrelkov z igralcem
+        for (Entitete e : List.copyOf(entities)) {
+            if (e instanceof Izstrelek iz && !iz.isFriendly()) {
+                if (iz.getBounds().intersects(player.getBounds())) {
                     iz.setAlive(false);
                     lives--;
                     if (lives <= 0) {
@@ -172,39 +174,40 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
             }
         }
 
+        // Trki nasprotnikov z igralcem
+        for (Entitete e : List.copyOf(entities)) {
+            if (e instanceof Nasprotnik nasprotnik) {
+                if (nasprotnik.getBounds().intersects(player.getBounds())) {
+                    nasprotnik.setAlive(false);
+                    lives--;
+                    if (lives <= 0) {
+                        running = false;
+                        if (onGameOver != null) SwingUtilities.invokeLater(onGameOver);
+                        return;
+                    }
+                }
+            }
+        }
+
         // Trki z ovirami
-        for (Ovira o : new ArrayList<>(obstacles)) {
+        for (Ovira o : List.copyOf(obstacles)) {
             if (player.getBounds().intersects(o.getBounds())) {
                 player.revertLastMove();
             }
         }
 
-        // Čiščenje
-        List<Entitete> toRemove = new ArrayList<>();
-        for (Entitete e : entities) {
-            if (!e.isAlive()) toRemove.add(e);
-        }
-        entities.removeAll(toRemove);
-
-        List<Ovira> oviraZaOdstraniti = new ArrayList<>();
-        for (Ovira o : obstacles) {
-            if (o.getBounds().getY() > Konstante.HEIGHT + 300) {
-                oviraZaOdstraniti.add(o);
-            }
-        }
-        obstacles.removeAll(oviraZaOdstraniti);
-     // Bomb visual effect duration
-        if (showBombEffect && System.currentTimeMillis() - bombEffectStart > bombEffectDuration) {
-            showBombEffect = false;
-        }
-
+        // Odstrani mrtve entitete
+        entities.removeIf(e -> !e.isAlive());
+        obstacles.removeIf(o -> o.getBounds().getY() > Konstante.HEIGHT + 300);
 
         // Posodobi prikaz
         if (statusPanel != null) {
             statusPanel.setScore(score);
             statusPanel.setLives(lives);
             statusPanel.repaint();
-        }}
+        }
+    }
+
 
     public void resetGame() {
         entities.clear();

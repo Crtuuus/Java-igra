@@ -3,6 +3,8 @@ package osnove_delovanja.Entitete;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+
 import osnove_delovanja.Razno.Konstante;
 
 public class Sledilec extends Nasprotnik {
@@ -23,6 +25,10 @@ public class Sledilec extends Nasprotnik {
             pos.x += dx / dist * speed;
             pos.y += dy / dist * speed;
         }
+    }
+    @Override
+    public Rectangle2D getBounds() {
+        return new Rectangle2D.Double(pos.x, pos.y, getWidth(), getHeight());
     }
 
     @Override

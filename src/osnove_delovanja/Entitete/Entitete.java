@@ -68,10 +68,8 @@ public abstract class Entitete {
         }
     }
 
-    public Rectangle2D getBounds() {
-        return new Rectangle2D.Double(pos.x, pos.y, width, height);
-    }
-    
+    public abstract Rectangle2D getBounds();
+
     // Getter / Setter methods
     public Point2D.Double getPos() { return pos; }
 
@@ -92,4 +90,5 @@ public abstract class Entitete {
     public abstract void update();
 
     public abstract void draw(java.awt.Graphics2D g);
-}
+    }
+

@@ -47,7 +47,7 @@ public class Game {
             frame.setLayout(new BorderLayout());
             frame.add(mainPanel, BorderLayout.CENTER);
             frame.add(statusPanel, BorderLayout.SOUTH);
-            frame.setSize(1200, 1260);
+            frame.setSize(1200, 800);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
 

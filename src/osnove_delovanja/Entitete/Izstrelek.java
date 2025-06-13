@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 
 import osnove_delovanja.Razno.Konstante; 
 
@@ -48,14 +49,19 @@ public class Izstrelek extends Entitete {
     @Override
     public void draw(Graphics2D g2) {
         g2.setColor(friendly ? Color.YELLOW : Color.RED);
-        var b = getBounds();
-        g2.fillOval((int) b.getX(), (int) b.getY(), (int) b.getWidth(), (int) b.getHeight());
+        g2.fill(getOblika());
     }
 
+    
     public boolean isFriendly() {
         return friendly;
     }
+    @Override
+    public Rectangle2D getBounds() {
+        return getOblika().getBounds2D();  // Pravilno zaokroženo na risano elipso
+    }
 
+    
     @Override
     public double getWidth() {
         return Konstante.IZSTRELEK_SIZE;
