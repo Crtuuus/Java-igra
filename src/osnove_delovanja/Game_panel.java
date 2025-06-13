@@ -1,8 +1,13 @@
-package osnove_delovanja;
 
-import osnove_delovanja.Entitete.*;
-import osnove_delovanja.Razno.Konstante;
-import osnove_delovanja.ui.StatusPanel;
+package osnove_delovanja;
+import osnove_delovanja.Entitete.Izstrelek;
+import osnove_delovanja.Entitete.Sledilec;
+import osnove_delovanja.Entitete.Strelec;
+import osnove_delovanja.Entitete.Igralec;
+import osnove_delovanja.Entitete.Nasprotnik;
+import osnove_delovanja.Entitete.Entitete;
+import osnove_delovanja.Entitete.HiterNasprotnik;
+import osnove_delovanja.Entitete.Ovira;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,6 +15,9 @@ import java.awt.event.*;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
+
+import osnove_delovanja.Razno.Konstante;
+import osnove_delovanja.ui.StatusPanel;
 
 public class Game_panel extends JPanel implements Runnable, MouseMotionListener, MouseListener {
     private Thread gameThread;
@@ -23,15 +31,30 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
     private int waveCount = 1;
     private int score = 0;
     private int lives = Konstante.ZIVLJENJA;
+    private int steviloIzstrelkov = Konstante.ST_ZACETNIH_IZSTRELKOV;
+    private Runnable onGameOver;
+    private boolean bombAvailable = false;
+    private long lastBombUse = 0;
+    private final long bombCooldown = 20000; // 20 seconds
+    private boolean showBombEffect = false;
+    private long bombEffectStart = 0;
+    private final long bombEffectDuration = 1000; // 1 second
 
-    public Game_panel() {
+
+
+    public Game_panel(Runnable onGameOver, StatusPanel statusPanel) {
+        this.onGameOver = onGameOver;
+        this.statusPanel = statusPanel;
         setPreferredSize(new Dimension(Konstante.WIDTH, Konstante.HEIGHT));
         setBackground(Color.BLACK);
         setFocusable(true);
         addMouseMotionListener(this);
         addMouseListener(this);
 
-        player = new Igralec(new Point2D.Double(Konstante.WIDTH / 2.0, Konstante.HEIGHT / 2.0));
+        player = new Igralec(new Point2D.Double(
+            Konstante.WIDTH / 2.0,
+            Konstante.HEIGHT / 2.0
+        ));
         entities.add(player);
 
         gameThread = new Thread(this);
@@ -51,9 +74,7 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
             updateGame();
             repaint();
             long elapsed = System.currentTimeMillis() - start;
-            try {
-                Thread.sleep(Math.max(1, frameTime - elapsed));
-            } catch (InterruptedException ignored) {}
+            try { Thread.sleep(Math.max(1, frameTime - elapsed)); } catch (InterruptedException ignored) {}
         }
     }
 
@@ -64,11 +85,13 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
         if (now - lastEnemyWave >= Konstante.INTERVALVALOV) {
             for (int i = 0; i < waveCount; i++) {
                 double x = Math.random() * (Konstante.WIDTH - Konstante.NASPROTNIK_SIZE);
-                Point2D.Double spawnPos = new Point2D.Double(x, 0);
-                if (Math.random() < 0.5) {
+                Point2D.Double spawnPos = new Point2D.Double(x, -Konstante.NASPROTNIK_SIZE);
+                if (Math.random() < 0.4) {
+                    entities.add(new HiterNasprotnik(spawnPos, player));
                     entities.add(new Sledilec(spawnPos, player));
                 } else {
                     entities.add(new Strelec(spawnPos, player));
+                    entities.add(new Sledilec(spawnPos, player));
                 }
             }
             waveCount++;
@@ -82,7 +105,7 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
             lastObstacleSpawn = now;
         }
 
-        // Enemy shooting
+        // Sovražniki streljajo
         for (Entitete e : new ArrayList<>(entities)) {
             if (e instanceof Strelec s) {
                 if (now - s.getLastShotTime() >= Konstante.STRELEC_FIRE_RATE) {
@@ -96,11 +119,11 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
             }
         }
 
-        // Update entities
+        // Posodobi entitete in ovire
         for (Entitete e : new ArrayList<>(entities)) e.update();
         for (Ovira o : new ArrayList<>(obstacles)) o.update();
 
-        // Handle collisions
+        // Trki
         for (Entitete e : new ArrayList<>(entities)) {
             if (e instanceof Izstrelek izstrelek) {
                 for (Entitete target : new ArrayList<>(entities)) {
@@ -108,7 +131,13 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
                         if (izstrelek.getBounds().intersects(nasprotnik.getBounds())) {
                             izstrelek.setAlive(false);
                             nasprotnik.setAlive(false);
-                            score += 10;
+                            score += 1;
+                            if (score % 20 == 0) {
+                                steviloIzstrelkov++;
+                            }
+                            if (score >= 100) {
+                                bombAvailable = true;
+                            }
                         }
                     }
                 }
@@ -116,67 +145,170 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
                 if (nasprotnik.getBounds().intersects(player.getBounds())) {
                     nasprotnik.setAlive(false);
                     lives--;
+                    if (lives <= 0) {
+                        running = false;
+                        if (onGameOver != null) {
+                            SwingUtilities.invokeLater(onGameOver);
+                        }
+
+                        return;
+                    }
                 }
             }
         }
 
+        // Trki izstrelkov nasprotnika in igralca
         for (Entitete e : new ArrayList<>(entities)) {
             if (e instanceof Izstrelek iz) {
                 if (!iz.isFriendly() && iz.getBounds().intersects(player.getBounds())) {
                     iz.setAlive(false);
                     lives--;
-                    if (lives <= 0) running = false;
+                    if (lives <= 0) {
+                        running = false;
+                        if (onGameOver != null) onGameOver.run();
+                        return;
+                    }
                 }
             }
         }
 
+        // Trki z ovirami
         for (Ovira o : new ArrayList<>(obstacles)) {
             if (player.getBounds().intersects(o.getBounds())) {
                 player.revertLastMove();
             }
         }
 
-        // Cleanup
-        entities.removeIf(ent -> !ent.isAlive());
-        obstacles.removeIf(o -> o.getBounds().getY() > Konstante.HEIGHT);
+        // Čiščenje
+        List<Entitete> toRemove = new ArrayList<>();
+        for (Entitete e : entities) {
+            if (!e.isAlive()) toRemove.add(e);
+        }
+        entities.removeAll(toRemove);
 
-        // Update HUD
+        List<Ovira> oviraZaOdstraniti = new ArrayList<>();
+        for (Ovira o : obstacles) {
+            if (o.getBounds().getY() > Konstante.HEIGHT + 300) {
+                oviraZaOdstraniti.add(o);
+            }
+        }
+        obstacles.removeAll(oviraZaOdstraniti);
+     // Bomb visual effect duration
+        if (showBombEffect && System.currentTimeMillis() - bombEffectStart > bombEffectDuration) {
+            showBombEffect = false;
+        }
+
+
+        // Posodobi prikaz
         if (statusPanel != null) {
             statusPanel.setScore(score);
             statusPanel.setLives(lives);
             statusPanel.repaint();
+        }}
+
+    public void resetGame() {
+        entities.clear();
+        obstacles.clear();
+        waveCount = 1;
+        score = 0;
+        lives = Konstante.ZIVLJENJA;
+        steviloIzstrelkov = Konstante.ST_ZACETNIH_IZSTRELKOV;
+        running = true;
+
+        player = new Igralec(new Point2D.Double(Konstante.WIDTH / 2.0, Konstante.HEIGHT / 2.0));
+        entities.add(player);
+
+        // ustavi staro nit če teče
+        if (gameThread != null && gameThread.isAlive()) {
+            gameThread.interrupt();
         }
+
+        gameThread = new Thread(this);
+        gameThread.start();
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
-        for (Entitete e : entities) e.draw(g2);
-        for (Ovira o : obstacles) o.draw(g2);
+
+        List<Entitete> entitiesCopy;
+        List<Ovira> obstaclesCopy;
+
+        synchronized (entities) {
+            entitiesCopy = new ArrayList<>(entities);
+        }
+        synchronized (obstacles) {
+            obstaclesCopy = new ArrayList<>(obstacles);
+        }
+
+        for (Entitete e : entitiesCopy) {
+            e.draw(g2);
+        }
+        for (Ovira o : obstaclesCopy) {
+            o.draw(g2);
+        }
+
+        g2.setColor(Color.WHITE);
+        g2.drawString("Življenja: " + lives, 10, Konstante.HEIGHT - 30);
+        g2.drawString("Točke: " + score, 10, Konstante.HEIGHT - 15);
+        if (bombAvailable) {
+            long cooldownRemaining = Math.max(0, bombCooldown - (System.currentTimeMillis() - lastBombUse));
+            g2.drawString("Bomb cooldown: " + (cooldownRemaining / 1000.0) + "s", 10, Konstante.HEIGHT - 45);
+        }
+
+        if (showBombEffect) {
+            g2.setColor(new Color(255, 100, 0, 120));
+            g2.fillOval(0, 0, getWidth(), getHeight());
+        }
+
     }
 
-    @Override
-    public void mouseMoved(MouseEvent e) {
+
+    @Override public void mouseMoved(MouseEvent e) {
         player.setTarget(new Point2D.Double(e.getX(), e.getY()));
     }
-
     @Override public void mouseDragged(MouseEvent e) { mouseMoved(e); }
-
     @Override
     public void mousePressed(MouseEvent e) {
-        if (SwingUtilities.isLeftMouseButton(e) && running) {
+        if (!running) return;
+
+        if (SwingUtilities.isLeftMouseButton(e)) {
             Point2D.Double mouse = new Point2D.Double(e.getX(), e.getY());
             Point2D.Double center = player.getPos();
             double dx = mouse.x - center.x;
             double dy = mouse.y - center.y;
-            double angle = Math.atan2(dy, dx);
-            double spawnDist = player.getWidth() / 2 + Konstante.IZSTRELEK_SIZE / 2.0;
-            double spawnX = center.x + Math.cos(angle) * spawnDist;
-            double spawnY = center.y + Math.sin(angle) * spawnDist;
-            entities.add(new Izstrelek(new Point2D.Double(spawnX, spawnY), mouse, true));
+            double baseAngle = Math.atan2(dy, dx);
+            double spread = Math.toRadians(15);
+
+            for (int i = 0; i < steviloIzstrelkov; i++) {
+                double angleOffset = spread * (i - (steviloIzstrelkov - 1) / 2.0);
+                double angle = baseAngle + angleOffset;
+                double spawnDist = player.getWidth()/2 + Konstante.IZSTRELEK_SIZE/2.0;
+                double spawnX = center.x + Math.cos(angle) * spawnDist;
+                double spawnY = center.y + Math.sin(angle) * spawnDist;
+
+                entities.add(new Izstrelek(new Point2D.Double(spawnX, spawnY),
+                        new Point2D.Double(center.x + Math.cos(angle) * 100,
+                                           center.y + Math.sin(angle) * 100),
+                        true));
+            }
+        }
+
+        // Bomb: Right-click
+        if (SwingUtilities.isRightMouseButton(e) && bombAvailable) {
+            long now = System.currentTimeMillis();
+            if (now - lastBombUse >= bombCooldown) {
+                entities.removeIf(ent -> ent instanceof Nasprotnik);
+                lastBombUse = now;
+                showBombEffect = true;
+                bombEffectStart = now;
+        
+            }
+        
         }
     }
+
 
     @Override public void mouseReleased(MouseEvent e) {}
     @Override public void mouseEntered(MouseEvent e) {}

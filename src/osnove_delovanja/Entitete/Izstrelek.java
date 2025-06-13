@@ -39,8 +39,8 @@ public class Izstrelek extends Entitete {
         pos.y += vel.y;
 
         // Ubij izstrelek, če zapusti zaslon
-        if (pos.x < -10 || pos.x > Konstante.WIDTH + 10 ||
-            pos.y < -10 || pos.y > Konstante.HEIGHT + 10) {
+        if (pos.x > Konstante.WIDTH + 200||
+            pos.y > Konstante.HEIGHT + 300 ) {
             setAlive(false);
         }
     }
