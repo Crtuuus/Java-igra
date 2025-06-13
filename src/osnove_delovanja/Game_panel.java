@@ -147,7 +147,7 @@ public class Game_panel extends JPanel implements Runnable, MouseMotionListener,
                             izstrelek.setAlive(false);
                             nasprotnik.setAlive(false);
                             score += 1;
-                            if (score % 20 == 0) {
+                            if (score % 20 == 0 && steviloIzstrelkov < 7) {
                                 steviloIzstrelkov++;
                             }
                             if (score >= 100) {
